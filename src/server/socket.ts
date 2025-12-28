@@ -1,10 +1,27 @@
 import { createServer } from 'http'
 import { Server, Socket } from 'socket.io'
 
-const httpServer = createServer()
+const httpServer = createServer((req, res) => {
+  // Health check endpoint for Railway
+  if (req.url === '/health' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ status: 'ok', service: 'fire-chat-socket' }))
+    return
+  }
+  res.writeHead(404)
+  res.end()
+})
+
+const allowedOrigins = [
+  process.env.NEXTAUTH_URL,
+  'http://localhost:3000',
+  'https://fire-chat-beta.vercel.app',
+  /\.vercel\.app$/,
+].filter(Boolean)
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -113,9 +130,9 @@ io.on('connection', (socket: Socket) => {
   })
 })
 
-const PORT = parseInt(process.env.SOCKET_PORT || '3001')
+const PORT = parseInt(process.env.PORT || process.env.SOCKET_PORT || '3001')
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Socket.io server running on port ${PORT}`)
 })
 
