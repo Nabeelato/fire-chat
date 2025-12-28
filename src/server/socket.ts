@@ -12,16 +12,13 @@ const httpServer = createServer((req, res) => {
   res.end()
 })
 
-const allowedOrigins = [
-  process.env.NEXTAUTH_URL,
-  'http://localhost:3000',
-  'https://fire-chat-beta.vercel.app',
-  /\.vercel\.app$/,
-].filter(Boolean)
-
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: [
+      'http://localhost:3000',
+      'https://fire-chat-beta.vercel.app',
+      process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    ],
     methods: ['GET', 'POST'],
     credentials: true,
   },
