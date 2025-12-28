@@ -3,6 +3,30 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+interface MessageWithRelations {
+  id: string
+  content: string
+  userId: string
+  channelId: string
+  type: string
+  timestamp: Date
+  user: {
+    id: string
+    name: string | null
+    email: string
+    avatar: string | null
+    status: string
+  }
+  files: Array<{
+    id: string
+    filename: string
+    originalName: string
+    path: string
+    size: number
+    mimeType: string
+  }>
+}
+
 // GET /api/channels/[channelId]/messages - Get messages for a channel
 export async function GET(
   request: NextRequest,
@@ -35,7 +59,7 @@ export async function GET(
     }
 
     if (channel.type === 'private') {
-      const isMember = channel.members.some(m => m.userId === session.user!.id)
+      const isMember = channel.members.some((m: { userId: string }) => m.userId === session.user!.id)
       if (!isMember) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
@@ -64,7 +88,7 @@ export async function GET(
       }),
     })
 
-    const formattedMessages = messages.map(msg => ({
+    const formattedMessages = (messages as MessageWithRelations[]).map((msg) => ({
       id: msg.id,
       content: msg.content,
       userId: msg.userId,
@@ -78,7 +102,7 @@ export async function GET(
         avatar: msg.user.avatar,
         status: msg.user.status,
       },
-      files: msg.files.map(f => ({
+      files: msg.files.map((f) => ({
         id: f.id,
         filename: f.filename,
         originalName: f.originalName,
@@ -137,7 +161,7 @@ export async function POST(
 
     // For private channels, user must be a member
     // For public channels, auto-join on first message
-    const isMember = channel.members.some(m => m.userId === session.user!.id)
+    const isMember = channel.members.some((m: { userId: string }) => m.userId === session.user!.id)
     
     if (channel.type === 'private' && !isMember) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })

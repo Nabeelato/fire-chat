@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+interface ChannelWithCount {
+  id: string
+  name: string
+  description: string | null
+  type: string
+  creatorId: string
+  _count: { members: number }
+}
+
 // GET /api/channels - Get all channels for the current user
 export async function GET() {
   try {
@@ -33,7 +42,7 @@ export async function GET() {
       orderBy: { name: 'asc' }
     })
 
-    const formattedChannels = channels.map(channel => ({
+    const formattedChannels = (channels as ChannelWithCount[]).map((channel) => ({
       id: channel.id,
       name: channel.name,
       description: channel.description,

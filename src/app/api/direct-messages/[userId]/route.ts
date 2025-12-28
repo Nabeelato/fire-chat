@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+interface DMWithSender {
+  id: string
+  content: string
+  senderId: string
+  receiverId: string
+  type: string
+  timestamp: Date
+  sender: {
+    id: string
+    name: string | null
+    email: string
+    avatar: string | null
+    status: string
+  }
+}
+
 // GET /api/direct-messages/[userId] - Get messages with a specific user
 export async function GET(
   request: NextRequest,
@@ -63,7 +79,7 @@ export async function GET(
       }),
     })
 
-    const formattedMessages = messages.map(msg => ({
+    const formattedMessages = (messages as DMWithSender[]).map((msg) => ({
       id: msg.id,
       content: msg.content,
       senderId: msg.senderId,

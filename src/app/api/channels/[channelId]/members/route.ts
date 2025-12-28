@@ -42,13 +42,13 @@ export async function GET(
 
     // Check access for private channels
     if (channel.type === 'private') {
-      const isMember = channel.members.some(m => m.userId === session.user!.id)
+      const isMember = channel.members.some((m: { userId: string }) => m.userId === session.user!.id)
       if (!isMember) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
     }
 
-    const members = channel.members.map(m => ({
+    const members = channel.members.map((m: { user: { id: string; name: string | null; email: string; avatar: string | null; status: string }; role: string; joinedAt: Date }) => ({
       id: m.user.id,
       name: m.user.name,
       email: m.user.email,
