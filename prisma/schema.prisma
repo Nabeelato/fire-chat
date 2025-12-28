@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model for authentication and profiles
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  avatar    String?
+  status    String   @default("offline") // online, offline, away
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  channels     ChannelMember[]
+  messages     Message[]
+  sentFiles    File[]
+  directMessages DirectMessage[]
+  receivedDirectMessages DirectMessage[] @relation("DirectMessageReceiver")
+
+  @@map("users")
+}
+
+// Channel model for chat rooms
+model Channel {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("public") // public, private
+  creatorId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members ChannelMember[]
+  messages Message[]
+
+  @@map("channels")
+}
+
+// Junction table for channel membership
+model ChannelMember {
+  id        String   @id @default(cuid())
+  userId    String
+  channelId String
+  role      String   @default("member") // admin, member
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@map("channel_members")
+}
+
+// Message model for channel messages
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  channelId String
+  type      String   @default("text") // text, file, system
+  timestamp DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  files   File[]
+
+  @@map("messages")
+}
+
+// File model for attachments
+model File {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  path        String
+  size        Int
+  mimeType    String
+  messageId   String?
+  uploaderId  String
+  uploadedAt  DateTime @default(now())
+
+  // Relations
+  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@map("files")
+}
+
+// Direct message model for one-on-one conversations
+model DirectMessage {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  type       String   @default("text") // text, file
+  timestamp  DateTime @default(now())
+
+  // Relations
+  sender   User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation(fields: [receiverId], references: [id], onDelete: Cascade, name: "DirectMessageReceiver")
+
+  @@map("direct_messages")
+}
