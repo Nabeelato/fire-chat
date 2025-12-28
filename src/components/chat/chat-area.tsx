@@ -116,14 +116,32 @@ export function ChatArea() {
   }
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return
+    if (!message.trim() || !currentUser) return
 
     const content = message.trim()
     setMessage("")
 
+    // Stop typing indicator immediately
+    handleTypingStop()
+
     try {
       if (activeChannel) {
-        // Send channel message
+        // Create optimistic message (show immediately)
+        const tempId = `temp-${Date.now()}`
+        const optimisticMessage: Message = {
+          id: tempId,
+          content,
+          userId: currentUser.id,
+          channelId: activeChannel.id,
+          type: 'text',
+          timestamp: new Date().toISOString(),
+          user: currentUser,
+        }
+        
+        // Add message immediately (optimistic update)
+        addMessage(optimisticMessage)
+
+        // Send to server in background
         const res = await fetch(`/api/channels/${activeChannel.id}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -131,17 +149,34 @@ export function ChatArea() {
         })
 
         if (res.ok) {
-          const newMessage = await res.json()
-          addMessage(newMessage)
+          const serverMessage = await res.json()
+          // Replace temp message with server message (has real ID)
+          // The duplicate check in store will handle this
+          addMessage(serverMessage)
           
           // Broadcast via socket
           emit("message:send", {
             channelId: activeChannel.id,
-            message: newMessage,
+            message: serverMessage,
           })
         }
       } else if (activeDirectConversation) {
-        // Send direct message
+        // Create optimistic DM
+        const tempId = `temp-${Date.now()}`
+        const optimisticDM: DirectMessage = {
+          id: tempId,
+          content,
+          senderId: currentUser.id,
+          receiverId: activeDirectConversation.user.id,
+          type: 'text',
+          timestamp: new Date().toISOString(),
+          sender: currentUser,
+        }
+        
+        // Add DM immediately
+        addDirectMessage(optimisticDM)
+
+        // Send to server in background
         const res = await fetch(`/api/direct-messages/${activeDirectConversation.user.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -149,22 +184,20 @@ export function ChatArea() {
         })
 
         if (res.ok) {
-          const newMessage = await res.json()
-          addDirectMessage(newMessage)
+          const serverMessage = await res.json()
+          addDirectMessage(serverMessage)
           
           // Broadcast via socket
           emit("dm:send", {
             receiverId: activeDirectConversation.user.id,
-            message: newMessage,
+            message: serverMessage,
           })
         }
       }
     } catch (error) {
       console.error("Error sending message:", error)
+      // TODO: Could remove optimistic message or show error state
     }
-
-    // Stop typing indicator
-    handleTypingStop()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
