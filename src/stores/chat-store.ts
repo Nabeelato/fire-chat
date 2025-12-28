@@ -134,7 +134,13 @@ export const useChatStore = create<ChatState>((set) => ({
   // Messages
   messages: [],
   setMessages: (messages) => set({ messages }),
-  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+  addMessage: (message) => set((state) => {
+    // Prevent duplicates by checking if message already exists
+    if (state.messages.some(m => m.id === message.id)) {
+      return state
+    }
+    return { messages: [...state.messages, message] }
+  }),
   updateMessage: (messageId, updates) => set((state) => ({
     messages: state.messages.map((msg) =>
       msg.id === messageId ? { ...msg, ...updates } : msg
@@ -160,7 +166,13 @@ export const useChatStore = create<ChatState>((set) => ({
 
   directMessages: [],
   setDirectMessages: (messages) => set({ directMessages: messages }),
-  addDirectMessage: (message) => set((state) => ({ directMessages: [...state.directMessages, message] })),
+  addDirectMessage: (message) => set((state) => {
+    // Prevent duplicates by checking if message already exists
+    if (state.directMessages.some(m => m.id === message.id)) {
+      return state
+    }
+    return { directMessages: [...state.directMessages, message] }
+  }),
 
   // Online users
   onlineUsers: new Set(),
