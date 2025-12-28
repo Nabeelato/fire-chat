@@ -38,23 +38,41 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Create default #general channel and add user to it
-    const generalChannel = await prisma.channel.create({
-      data: {
-        name: "general",
-        description: "General discussion",
-        type: "public",
-        creatorId: user.id,
-      },
+    // Find or create default #general channel
+    let generalChannel = await prisma.channel.findFirst({
+      where: { name: "general" }
     })
 
-    await prisma.channelMember.create({
-      data: {
-        userId: user.id,
-        channelId: generalChannel.id,
-        role: "admin",
-      },
+    if (!generalChannel) {
+      generalChannel = await prisma.channel.create({
+        data: {
+          name: "general",
+          description: "General discussion",
+          type: "public",
+          creatorId: user.id,
+        },
+      })
+    }
+
+    // Add user to general channel if not already a member
+    const existingMembership = await prisma.channelMember.findUnique({
+      where: {
+        userId_channelId: {
+          userId: user.id,
+          channelId: generalChannel.id,
+        }
+      }
     })
+
+    if (!existingMembership) {
+      await prisma.channelMember.create({
+        data: {
+          userId: user.id,
+          channelId: generalChannel.id,
+          role: "member",
+        },
+      })
+    }
 
     // Remove password from response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
